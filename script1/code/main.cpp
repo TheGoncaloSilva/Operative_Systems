@@ -71,6 +71,11 @@ void menuChoiceReset()
 
 void menuChoiceInsert()
 {
+	std::cout << "NMEC: ";
+	std::cin >> nmec;
+	std::cout << "\nNome: ";
+	std::cin >> name;
+	insert(nmec, *name);
 }
 
 /* ******************************************** */
@@ -89,6 +94,7 @@ void menuChoiceRemove()
 
 void menuChoicePrint()
 {
+
 }
 
 /* ******************************************** */

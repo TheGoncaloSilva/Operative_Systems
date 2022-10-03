@@ -47,6 +47,13 @@ namespace ull
 
     void print()
     {
+	Node *start = head;
+	int records = 1;
+	while(start.next != NULL){
+		std::cout << "--- Record " << records++ << " ---\n";
+		std::cout << "	NMEC: " << reg.nmec << "\n";
+		std::cout << "	Name: " << reg.name << "\n";
+	}
     }
 
     /* ************************************************* */
@@ -58,8 +65,11 @@ namespace ull
 	n->reg.name = name;
 
 	if(head == NULL){
-		head = n;
+		n->next = NULL;
+	}else{
+		n->next = head.next;
 	}
+	head = n;
 
     }
 
