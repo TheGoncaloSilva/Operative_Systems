@@ -12,7 +12,7 @@ int main(void)
     for (uint32_t i = 0; i < NTIMES; i++)
     { 
         printf ("\r%08u ", i);
-        fflush (stdout);
+        fflush (stdout); // como os inputs sao line buffered, quando o buffer enche ou aparece o \n, ele e apagado
         usleep(500000);
     }
     printf ("\n");

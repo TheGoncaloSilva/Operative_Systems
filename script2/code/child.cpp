@@ -9,7 +9,9 @@
 int main(void)
 {
     printf("I'm the child: PID = %d, PPID = %d\n", getpid(), getppid());
-    usleep(0);
+    usleep(0);	// sleep e em segundos
+    		// usleep e em microsegundos
+		// nao usa busy-waiting
     printf("I'm the child: PID = %d, PPID = %d\n", getpid(), getppid());
 
    return EXIT_SUCCESS;

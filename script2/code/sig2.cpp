@@ -18,6 +18,8 @@ static void Interrupt (int signum)
     }
 }
 
+// Quando se faz ctrl+c, a execucao e interrompida para correr sub-rotina e depois o programa volta a executar 
+
 int main(void)
 {
     /* Installing the handling routine */

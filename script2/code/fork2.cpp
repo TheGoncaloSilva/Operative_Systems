@@ -11,7 +11,9 @@ int main(void)
   printf("Before the fork:\n");
   printf("  PID = %d, PPID = %d\n", getpid(), getppid());
 
-  pid_t ret = pfork();
+  pid_t ret = pfork(); // Se o ret for 0, estamos no filho. Caso devolva outro valor estamos no pai e o valor retornado e o do filho
+  			// Todos os processos tem um processo pai, no caso quando lancamos os programas, o parente e a bash
+			// "|" e o pipe em unix, pega no que esta a direita da barra e usa para fornecer no que esta a esquerda
 
   printf("After the fork:\n");
   printf("  PID = %d, PPID = %d\n", getpid(), getppid());
