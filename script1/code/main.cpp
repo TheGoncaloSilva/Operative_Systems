@@ -65,17 +65,43 @@ void menuChoiceQuit()
 
 void menuChoiceReset()
 {
+    ull::reset();
 }
 
 /* ******************************************** */
 
 void menuChoiceInsert()
 {
-	std::cout << "NMEC: ";
-	std::cin >> nmec;
-	std::cout << "\nNome: ";
-	std::cin >> name;
-	insert(nmec, *name);
+    char* name = NULL;
+    size_t n = 0;
+    fprintf(stdout, "Please enter the student name: ");
+    if(getline(&name, &n, stdin) < 0){
+        perror("Error ocurred on retrieving input");
+        delete name;
+        return;
+    }
+    char* temp = NULL;
+    n = 0;
+    fprintf(stdout, "Please enter the student nmec: ");
+    if(getline(&temp, &n, stdin) < 0){
+        perror("Error ocurred on retrieving input");
+        delete temp;
+        delete name;
+        return;
+    }
+    int32_t nmec = -1;
+    sscanf(temp, "%d", &nmec);
+
+	if (nmec == -1 || name[0] == '\0') {
+		perror("Please enter a valid nmec and name");
+        delete temp;
+        delete name;
+		return;
+	}else
+        ull::insert(nmec, name);
+    
+    delete name;
+    delete temp;
 }
 
 /* ******************************************** */
@@ -94,7 +120,7 @@ void menuChoiceRemove()
 
 void menuChoicePrint()
 {
-
+    ull::print();
 }
 
 /* ******************************************** */
