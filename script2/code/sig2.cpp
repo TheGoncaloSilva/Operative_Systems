@@ -18,16 +18,21 @@ static void Interrupt (int signum)
     }
 }
 
-// Quando se faz ctrl+c, a execucao e interrompida para correr sub-rotina e depois o programa volta a executar 
-
 int main(void)
 {
-    /* Installing the handling routine */
+    /* Installing the handling routine for -INT signals */
     struct sigaction sigact;
     sigact.sa_handler = Interrupt;
     sigemptyset (&sigact.sa_mask);
     sigact.sa_flags = 0;
     if (sigaction (SIGINT, &sigact, NULL) < 0)
+    { 
+        perror ("Rotina de atendimento não instalada\n");
+        return EXIT_FAILURE;
+    }
+    
+    /* Installing the handling routine for -TERM signals */
+    if (sigaction (SIGTERM, &sigact, NULL) < 0)
     { 
         perror ("Rotina de atendimento não instalada\n");
         return EXIT_FAILURE;

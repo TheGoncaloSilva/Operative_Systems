@@ -37,14 +37,45 @@ namespace ull
 
     void reset()
     {
-
+        if(head == NULL) return;
+        Node* cycle = head;
+        while(cycle != NULL){
+            Node* temp = cycle->next;
+            free((void*) cycle->reg.name);
+            free(cycle);
+            cycle = temp;
+        }
+        head = NULL;
     }
 
     /* ************************************************* */
 
     void load(const char *fname)
     {
+        FILE* file = fopen(fname, "r");
+        if(file == NULL){
+            fprintf(stderr, "File %s cannot be opened", fname);
+            return;
+        }
+        ssize_t read;   // holds the number of characters read
+        int lineCounter = 1;
+        size_t n = 0;
+        char* line = NULL;
+        while ((read = getline(&line, &n, file) != -1)){
+            char* name = new char[50];
+            int32_t nmec;
 
+            sscanf(line , "%[^;]; %d\n" , name , &nmec);
+            if(name != NULL){
+                insert(nmec, name);
+            }else
+                fprintf(stderr, "Error reading file in line, %d\n", lineCounter);
+
+            delete name;
+            lineCounter++;
+        }
+        delete line;
+        fclose(file);
     }
 
     /* ************************************************* */
@@ -52,7 +83,7 @@ namespace ull
     void print()
     {
         if(head == NULL){
-            fprintf(stdout, "Please add elements before");
+            fprintf(stderr, "There are no students recorded");
             return;
         }
         fprintf(stdout, "\n*** List of students ***\n");
@@ -107,6 +138,14 @@ namespace ull
 
     const char *query(uint32_t nmec)
     {
+        // Makes a query with the nmec, to get the associated name
+        Node* cycle = head;
+        while(cycle != NULL){
+            if(cycle->reg.nmec == nmec){
+                return strdup(cycle->reg.name); // Uses strdup, to duplicate the string and avoid any changes
+            }
+            cycle = cycle->next;
+        }
         return NULL;
     }
 
@@ -114,6 +153,57 @@ namespace ull
 
     void remove(uint32_t nmec)
     {
+        if(head == NULL){
+            fprintf(stderr, "There are no elements in the list to remove");
+            return;
+        }
+
+        // choosen nmec is on the head
+        if(head->reg.nmec == nmec){
+            Node* temp = head->next;
+            free((void*) head->reg.name);
+            free(head);
+            head = temp;
+            return;
+        }
+
+        // find nmec in the list and remove it
+        Node* cycle = head->next;
+        while(cycle != NULL){
+            if(cycle->reg.nmec == nmec){
+                Node* temp = cycle->next;
+                free((void*)cycle->reg.name);
+                free(cycle);
+                cycle = temp;
+                return;
+            }
+            cycle = cycle->next;
+        }
+        fprintf(stderr, "Student with nmec %d not found", nmec);
+
+    }
+
+    /* ************************************************* */
+
+    void saveToFile(const char* file_name){
+        Node* cycle = head;
+        FILE* file = fopen(file_name, "w");
+        if(file == NULL){
+            fprintf(stderr, "Error creating file with name=%s\n", file_name);
+            return;
+        }
+
+        while(cycle != NULL){
+            int32_t nmec = cycle->reg.nmec;
+            const char* name = cycle->reg.name;
+            uint32_t size = floor(log10(abs(nmec))) + strlen(name) + 4; // gets the size amount needed to store the text
+            char* write_value = new char[size];
+            sprintf(write_value, "%s;%d\n", name, nmec);
+            fputs(write_value, file);
+            delete write_value;
+            cycle = cycle->next;
+        }
+        fclose(file);
     }
 
     /* ************************************************* */

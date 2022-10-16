@@ -70,6 +70,14 @@ namespace ull
      *  \param nmec The nmec associated to the register to be removed
      */
     void remove(uint32_t nmec);
+
+    /**
+     * \brief Saves the list to a file
+     *  \details
+     *    The list must be traversed and all elements saved to the file
+     *  \param file_name The file name used to save the files
+     */
+    void saveToFile(const char* file_name);
 }
 
 #endif /* __SO_IPC_ULL_ */

@@ -35,6 +35,7 @@ static void printMenu(void)
            "| 4 --- remove student, through number          |\n"
            "| 5 --- print list in ascending order of number |\n"
            "| 6 --- load list of students from file         |\n"
+           "| 7 --- save list in a file                     |\n"
            "+===============================================+\n");
 }
 
@@ -108,12 +109,57 @@ void menuChoiceInsert()
 
 void menuChoiceQuery()
 {
+    char* temp = NULL;
+    size_t n = 0;
+    fprintf(stdout, "Please enter the student nmec: ");
+    if(getline(&temp, &n, stdin) < 0){
+        perror("Error ocurred on retrieving input");
+        delete temp;
+        return;
+    }
+
+    int32_t nmec = -1;
+    sscanf(temp, "%d", &nmec);
+
+	if (nmec == -1) {
+		perror("Please enter a valid nmec and name");
+        delete temp;
+		return;
+	}
+    const char* str = ull::query(nmec);
+    if(str != NULL)
+        fprintf(stdout, "Student %s with nmec %d \n", str, nmec);
+    else
+        fprintf(stderr, "Student with nmec %d not in the list \n", nmec);
+
+    delete str;
+    delete temp;
 }
 
 /* ******************************************** */
 
 void menuChoiceRemove()
-{
+{   
+    char* temp = NULL;
+    size_t n = 0;
+    fprintf(stdout, "Please enter the student nmec: ");
+    if(getline(&temp, &n, stdin) < 0){
+        perror("Error ocurred on retrieving input");
+        delete temp;
+        return;
+    }
+
+    int32_t nmec = -1;
+    sscanf(temp, "%d", &nmec);
+
+	if (nmec == -1) {
+		perror("Please enter a valid nmec and name");
+        delete temp;
+		return;
+	}else
+        ull::remove(nmec);
+
+    delete temp;
 }
 
 /* ******************************************** */
@@ -127,6 +173,54 @@ void menuChoicePrint()
 
 void menuChoiceLoad()
 {
+    char* temp = NULL;
+    size_t n = 0;
+    fprintf(stdout , "Please enter the file name: ");
+    if(getline(&temp , &n , stdin) == -1)
+    {
+        fprintf(stderr , "Problem occurred with input");
+        delete temp;
+        return;
+    }
+    char* file_name = new char[strlen(temp)-1];
+    strncpy(file_name , temp , strlen(temp) -1);
+
+    if(file_name != NULL)
+        ull::load(file_name);
+    else
+        fprintf(stderr, "Please enter a valid file name");
+
+    delete temp;
+    delete file_name;
+
+}
+
+/* ******************************************** */
+
+void menuChoiceSave()
+{
+    char* temp = NULL;
+    size_t n = 0;
+    fprintf(stdout , "Please enter the output file name: ");
+    if(getline(&temp , &n , stdin) == -1)
+    {
+        fprintf(stderr , "Problem occurred with input");
+        delete temp;
+        return;
+    }
+
+    char* file_name = new char[strlen(temp)-1];
+    strncpy(file_name , temp , strlen(temp) -1);
+
+    if(file_name != NULL) 
+        ull::saveToFile(file_name);
+    else
+        fprintf(stderr , "Please enter a valid file name");
+    
+
+    delete temp;
+    delete file_name;
+
 }
 
 /* ******************************************** */
@@ -174,6 +268,9 @@ void getChoiceAndCallHandler()
             break;
         case 6:
             menuChoiceLoad();
+            break;
+        case 7:
+            menuChoiceSave();
             break;
         default:
             fprintf(stderr, "Wrong action required (%u)\n", cmd);

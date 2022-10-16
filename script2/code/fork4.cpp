@@ -15,8 +15,9 @@ int main(void)
   pid_t ret = pfork();
   if (ret == 0)
   {
-    execl("./child", "./child", NULL); // Funcao da biblioteca que substitui o programa em execucao por qualquer novo processo
-    						// Vai tudo para o lixo e e substituido por o programa novo
+    execl("./child", "./child", NULL); // Erro se child não estiver compilado
+            // Funcao da biblioteca que substitui o programa em execucao por qualquer novo processo
+    				// Vai tudo para o lixo e e substituido por o programa novo
 						// Tudo o resto que esta a frente e esquecido, caso o programa lancado exista
 						// Se o make child ainda nao for executado, o codigo a frente sera executado
 						// o execl tem child child pq o numero de argumentos e -1
@@ -35,7 +36,7 @@ int main(void)
   {
     printf("I'm the parent: PID = %d, PPID = %d\n", getpid(), getppid());
     usleep(20000);
-    // pwait(NULL);
+    //pwait(NULL);
   }
 
   return EXIT_SUCCESS;

@@ -11,7 +11,7 @@ int main(void)
   printf("Before the fork:\n");
   printf("  PID = %d, PPID = %d\n", getpid(), getppid());
 
-  pfork(); // O fork duplica o processo a correr e coontinua o processo pai
+  pfork(); // O fork duplica o processo a correr e continua o processo pai
   		// enquanto começa e executa o processo filho
 		// Nunca assumir que quem acabou ou executou primeiro éo processo pai ou filho
 		// A nao ser que seja programado para tal
