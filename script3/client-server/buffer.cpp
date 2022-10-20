@@ -22,6 +22,22 @@
 #include "process.h"
 #include "buffer.h"
 
+buffer* createBuffer(uint32_t *buffId){
+    /* Create the shared memory */
+    *buffId = pshmget(IPC_PRIVATE, sizeof(buffer), 0600 | IPC_CREAT | IPC_EXCL);
+    /* attach shared memory to process addressing space */
+    buffer* buff = (buffer*)pshmat(*buffId, NULL, 0);
+    // Create 1 semaphore
+    buff->semid = psemget(IPC_PRIVATE , 1 , 0600 | IPC_CREAT | IPC_EXCL);
+
+    // Semaphore is up by default
+    struct sembuf op = {0, 1, 0};
+    psemop(buff->semid, &op, 1);
+    
+    return buff;
+}
+
+
 void insert(buffer &buff, char* str, uint32_t strSize){
     reset(buff);
     buff.string = str;
@@ -32,7 +48,9 @@ void write_response(buffer &buff, uint32_t characters, uint32_t digits, uint32_t
     buff.nCharacters = characters;
     buff.nDigits = digits;
     buff.nSpaces = spaces;
-    buff.solved = true;
+
+    // Notify the client that the information has been processed
+    bufferSolved(buff);
 }
 
 void reset(buffer &buff){
@@ -41,7 +59,6 @@ void reset(buffer &buff){
     buff.nCharacters = 0;
     buff.nDigits = 0;
     buff.nSpaces = 0;
-    buff.solved = false;
 }
 
 void change(buffer &buff, char* newStr, uint32_t newStrSize){
@@ -50,7 +67,27 @@ void change(buffer &buff, char* newStr, uint32_t newStrSize){
     buff.stringSize = newStrSize;
 }
 
-void destroy(buffer &buff){
-    reset(buff);
-    free(&buff);
+void destroy(buffer &buff, uint32_t buffId){
+    pshmdt(&buff);
+    pshmctl(buffId , IPC_RMID , NULL);
+}
+
+void getStats(buffer &buff, uint32_t *characters, uint32_t *digits, uint32_t *spaces){
+    characters = &(buff.nCharacters);
+    digits = &(buff.nDigits);
+    spaces = &(buff.nSpaces);
+}
+
+void bufferWait(buffer &buff){
+    struct sembuf op = {0, 1, 0};
+    
+    // Decrement Semaphore
+    psemop(buff.semid, &op, 1);
+    // Wait for server to Increment
+    psemop(buff.semid, &op, 1);
+}
+
+void bufferSolved(buffer &buff){
+    struct sembuf op = {0 , 1 , 0};
+    psemop(buff.semid , &op , 1);
 }

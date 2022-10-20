@@ -26,11 +26,13 @@ struct buffer
 {
     char* string;
     uint32_t stringSize;
-    bool solved;
     uint32_t nCharacters;
     uint32_t nDigits;
     uint32_t nSpaces;
+    int32_t semid;
 };
+
+buffer* createBuffer(uint32_t *buffId);
 
 void insert(buffer &buff, char* str, uint32_t strSize);
 
@@ -39,3 +41,11 @@ void write_response(buffer &buff, uint32_t characters, uint32_t digits, uint32_t
 void reset(buffer &buff);
 
 void change(buffer &buff, char* newStr, uint32_t newStrSize);
+
+void destroy(buffer &buff, uint32_t buffId);
+
+void getStats(buffer &buff, uint32_t *characters, uint32_t *digits, uint32_t *spaces);
+
+void bufferWait(buffer &buff);
+
+void bufferSolved(buffer &buff);

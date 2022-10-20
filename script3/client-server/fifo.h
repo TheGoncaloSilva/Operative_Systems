@@ -22,10 +22,10 @@ namespace FIFO{
     };
 
     /** \brief create a FIFO in shared memory, initialize it, and return its id */
-    fifo* create();
+    fifo* createFifo(fifo* sFifo, uint32_t *fifoId);
 
     /** \brief destroy the shared FIFO given id */
-    void destroy(void);
+    void destroy(fifo* sFifo, uint32_t fifoId);
 
     /**
      *  \brief Insert a value into the FIFO. (Operation made by client)
@@ -33,17 +33,7 @@ namespace FIFO{
      * \param bufferId id of the buffer
      * \param value value to be stored
      */
-    void in(uint32_t bufferId, char* str, uint32_t strSize);
-
-        /**
-     *  \brief Alters a value in the fifo. (Operation made by server)
-     *
-     * \param bufferId id of the buffer
-     * \param characters value to be stored (number of characteres in the string)
-     * \param digits value to be stored (number of digits in the string)
-     * \param spaces value to be stored (number of spaces in the string)
-     */
-    void change(uint32_t bufferId, uint32_t characters, uint32_t digits, uint32_t spaces);
+    void in(fifo* sFifo, uint32_t bufferId);
 
     /**
      *  \brief Retrieval of a value from the FIFO.
@@ -51,6 +41,6 @@ namespace FIFO{
      * \param idp pointer to recipient where to store the producer id
      * \param valuep pointer to recipient where to store the value 
      */
-    void out(uint32_t bufferId, char &str, uint32_t &str_size);
+    uint32_t out(fifo* sFifo);
     
 } 

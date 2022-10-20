@@ -8,7 +8,9 @@
  * 
 */
 
+#include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -26,36 +28,67 @@ namespace Service{
     /* \brief maximum number of possible buffers */
     #define N 5
 
-    static buffer pool[N];
+    static buffer *pool[N];
+    static uint32_t poolId[N];
     static FIFO::fifo *freeBuffers;
+    static uint32_t freeBuffersId, pendingRequestsId;
     static FIFO::fifo *pendingRequests;
 
+    void setup_service(){
+        freeBuffers = FIFO::createFifo(freeBuffers, &freeBuffersId);
+        pendingRequests = FIFO::createFifo(pendingRequests, &pendingRequestsId);
 
-    /* 
-     * \brief use a buffer, to send to server
-     */
-    struct ServiceRequest{
-        int32_t ola;
-    };
-
-    /* 
-     * \brief return the data to client
-     */
-    struct ServiceResponse{
-        int32_t adeus;
-    };
-
-    void create(){
-        for(int i = 0; i < N; i ++){
-            
+        for(uint32_t i = 0; i < N; i ++){
+            pool[i] = createBuffer(&poolId[i]);
+            FIFO::in(freeBuffers, poolId[i]);
         }
     }
 
+    /* Called by the client when it wants to be served */
+    void callService(char *str, uint32_t strSize){
+        // Get buffer from freeBuffers
+        uint32_t buffId = FIFO::out(freeBuffers);
+        buffer *buff = pool[buffId];
+        // Write data to be processed into buffer
+        insert(*buff, str, strSize);
+        // Insert the buffer id to be processed by the server
+        FIFO::in(pendingRequests, buffId);
+        // wait for server processing
+        bufferWait(*buff);
+        // check and print data received
+        uint32_t nCharaters, nDigits, nSpaces;
+        getStats(*buff, &nCharaters, &nDigits, &nSpaces);
+        fprintf(stdout, "String %s processes, %d characters, %d digits, %d spaces", 
+            str, nCharaters, nDigits, nSpaces);
+        // reset buffer -> maybe destroy or release semaphores
+        reset(*buff);
+        // put it into fifo free
+        FIFO::in(freeBuffers, buffId);
+    }
 
-    
-    
-    
-    // create fifos
+    /* Called by the server, in a cyclic way*/
+    void processService(){
+        // check if there are buffers in pending and get buffer id
+        uint32_t buffId = FIFO::out(pendingRequests);
+        buffer *buff = pool[buffId];
+        // process request
+        uint32_t nCharacters, nDigits, nSpaces;
+        processData(buff->string, buff->stringSize, &nCharacters, &nDigits, &nSpaces);
+        // write response
+        write_response(*buff, nCharacters, nDigits, nSpaces);
+    }
 
-    // ver
+    /* Called by the server to process a string and output stats */
+    void processData(char *str, uint32_t strSize, uint32_t *characters, uint32_t *digits, uint32_t *spaces){
+        for(int32_t i = 0; i < strSize; i++){
+            if(isspace(str[i])){
+                spaces++;
+            }else if (isdigit(str[i])){
+                digits++;
+            }else{
+                characters++;
+            }
+        }
+    }
+    
 }

@@ -20,11 +20,12 @@
 #include "threads.h"
 
 namespace Service{
-    struct ServiceRequest{
-        int32_t ola;
-    };
-    struct ServiceResponse{
-        int32_t adeus;
-    };
-    
+
+    void setup_service();
+
+    void callService(char *str, uint32_t strSize);
+
+    void processService();
+
+    void processData(char *str, uint32_t strSize, uint32_t *characters, uint32_t *digits, uint32_t *spaces);
 }

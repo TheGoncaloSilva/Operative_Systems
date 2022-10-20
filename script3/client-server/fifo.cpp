@@ -15,10 +15,6 @@
 
 namespace FIFO{
 
-
-    int fifoId = -1;
-    fifo *sFifo = NULL;
-
     /* ************************************************* */
 
     /* index of access, full and empty semaphores */
@@ -41,13 +37,13 @@ namespace FIFO{
     }
     
     /* create a FIFO in shared memory, initialize it, and return its id */
-    fifo* create(){
+    fifo* createFifo(fifo* sFifo, uint32_t *fifoId){
 
         /* Create the shared memory */
-        fifoId = pshmget(IPC_PRIVATE, sizeof(fifo), 0600 | IPC_CREAT | IPC_EXCL);
+        *fifoId = pshmget(IPC_PRIVATE, sizeof(fifo), 0600 | IPC_CREAT | IPC_EXCL);
 
         /* attach shared memory to process addressing space */
-        sFifo = (fifo*)pshmat(fifoId, NULL, 0);
+        sFifo = (fifo*)pshmat(*fifoId, NULL, 0);
 
         /* init fifo */
         for(uint32_t i = 0; i < N; i++){
@@ -69,19 +65,7 @@ namespace FIFO{
     /* ************************************************* */
 
     /* destroy the shared FIFO given id */
-    void isFull(void){
-
-    }
-    /* ************************************************* */
-
-    /* destroy the shared FIFO given id */
-    void isEmpty(void){
-
-    }
-    /* ************************************************* */
-
-    /* destroy the shared FIFO given id */
-    void destroy(void){
+    void destroy(fifo* sFifo, uint32_t fifoId){
         /* detach shared memory from process addressing space */
         pshmdt(sFifo);
 
@@ -96,14 +80,16 @@ namespace FIFO{
     /* ************************************************* */
 
     /* Insert a value into the FIFO. (Operation made by client) */
-    void in(uint32_t bufferId, char* str, uint32_t strSize){
+    void in(fifo* sFifo, uint32_t bufferId){
         /* decrement emptiness, block if necessary and lock access */
         down(sFifo->semid, NSLOTS);
         down(sFifo->semid, ACCESS);
 
         /* Insert values */
-        //sFifo->bufferIds[sFifo->ii] = 
-
+        sFifo->bufferIds[sFifo->ii] = bufferId;
+        gaussianDelay(0.1, 0.5);
+        sFifo->ii = (sFifo->ii + 1) % N;
+        sFifo->cnt++;
 
         /* unlock access and increment fullness */
         up(sFifo->semid, ACCESS);
@@ -112,18 +98,23 @@ namespace FIFO{
     }
     /* ************************************************* */
 
-    /*  Alters a value in the fifo. (Operation made by server) */
-    void change(uint32_t bufferId, uint32_t characters, uint32_t digits, uint32_t spaces){
-
-
-
-    }
-    /* ************************************************* */
-
     /* Retrieval of a value from the FIFO.  */
-    void out(uint32_t bufferId, char &str, uint32_t &str_size){
+    uint32_t out(fifo* sFifo){
 
+    /* decrement emptiness, block if necessary and lock access */
+    down(sFifo->semid, NSLOTS);
+    down(sFifo->semid, ACCESS);
 
+    /* Remove a value of the dictionary and return it*/
+    uint32_t bufferId = sFifo->bufferIds[sFifo->ri];
+    sFifo->bufferIds[sFifo->ri] = -1;
+    sFifo->ri = (sFifo->ri + 1) % N;
+    sFifo->cnt--;
 
+    /* unlock access and increment fullness */
+    up(sFifo->semid, ACCESS);
+    up(sFifo->semid, NITEMS);
+
+    return bufferId;
     }
 }
