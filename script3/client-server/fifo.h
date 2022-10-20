@@ -1,36 +1,49 @@
-/**
- *  @file 
- *
- *  @brief A simple FIFO, whose elements are pairs of integers,
- *      one representing the producer and the other the value produced
- *
- *  The following operations are defined:
- *     \li insertion of a value
- *     \li retrieval of a value.
- *
- * \author (2016-2022) Artur Pereira <artur at ua.pt>
- */
-
-#ifndef __SO_IPC_FIFO_
-#define __SO_IPC_FIFO_
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <errno.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
 #include <stdint.h>
+#include "delays.h"
+#include "process.h"
+#include "threads.h"
 
-namespace fifo
-{
+#define N 10
+namespace FIFO{
+    struct fifo
+    {
+        int semid;                // syncronization semaphore array
+        uint32_t ii;              // point of insertion
+        uint32_t ri;              // point of retrieval
+        uint32_t cnt;             // number of items stored
+        uint32_t bufferIds[N];    // Items/buffers
+    };
+
     /** \brief create a FIFO in shared memory, initialize it, and return its id */
-    void create(void);
+    fifo* create();
 
     /** \brief destroy the shared FIFO given id */
     void destroy(void);
 
     /**
-     *  \brief Insertion of a value into the FIFO.
+     *  \brief Insert a value into the FIFO. (Operation made by client)
      *
-     * \param id id of the producer
+     * \param bufferId id of the buffer
      * \param value value to be stored
      */
-    void in(uint32_t id, uint32_t value);
+    void in(uint32_t bufferId, char* str, uint32_t strSize);
+
+        /**
+     *  \brief Alters a value in the fifo. (Operation made by server)
+     *
+     * \param bufferId id of the buffer
+     * \param characters value to be stored (number of characteres in the string)
+     * \param digits value to be stored (number of digits in the string)
+     * \param spaces value to be stored (number of spaces in the string)
+     */
+    void change(uint32_t bufferId, uint32_t characters, uint32_t digits, uint32_t spaces);
 
     /**
      *  \brief Retrieval of a value from the FIFO.
@@ -38,7 +51,6 @@ namespace fifo
      * \param idp pointer to recipient where to store the producer id
      * \param valuep pointer to recipient where to store the value 
      */
-    void out(uint32_t * idp, uint32_t  *valuep);
-
-}
-#endif /* __SO_IPC_FIFO_ */
+    void out(uint32_t bufferId, char &str, uint32_t &str_size);
+    
+} 

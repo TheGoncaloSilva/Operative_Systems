@@ -6,11 +6,11 @@ TARGETS = client-server
 
 all:	$(TARGETS)
 
-client-server:	client-server.o service.o buffer.o fifo.o process.o  utils.o thread.o
+client-server:	client-server.o service.o classes.o fifo.o process.o  utils.o thread.o
 		g++ -o $@ $^ $(LDFLAGS)
 
 
-buffer.o fifo.o process.o service.o service.o thread.o utils.o: %.o:		%.h
+classes.o fifo.o process.o service.o service.o thread.o utils.o: %.o:		%.h
 
 clean:
 		rm -f *.o *~

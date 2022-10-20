@@ -15,10 +15,11 @@
 #include  <sys/types.h>
 #include  <math.h>
 #include <stdint.h>
-
-#include  "fifo.h"
-#include  "delays.h"
-#include  "process.h"
+#include "threads.h"
+#include "fifo.h"
+#include "delays.h"
+#include "process.h"
+#include "service.h"
 
 const char* stringsToProcess[] = {
     "batatas arroz",
@@ -30,8 +31,14 @@ const char* stringsToProcess[] = {
     "gaming"
 };
 
+Service::ServiceRequest createRequest(){
+
+}
+
 /* Called by the client when it wants to be served */
-//void callService(ServiceRequest & req, ServiceResponse & res);
+void callService(Service::ServiceRequest & req, Service::ServiceResponse & res){
+
+}
 
 /* Called by the server, in a cyclic way*/
 void processService(){
@@ -57,7 +64,8 @@ int main(int argc, char *argv[]){
     fprintf(stdout, "Launching %d client processes\m", nClients);
     for(uint32_t id = 0; id < nClients; id++){
         if((cPid[id] = pfork()) == 0){
-
+            createRequest();
+            //callService();
             exit(0);
         }else{  // For the parent process to print
             fprintf(stdout, "-> Client process %d was launched\n", id);
