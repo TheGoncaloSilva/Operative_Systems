@@ -15,8 +15,6 @@
 #include <sys/types.h>
 #include <math.h>
 #include <stdint.h>
-#include "threads.h"
-#include "fifo.h"
 #include "delays.h"
 #include "process.h"
 #include "service.h"

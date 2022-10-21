@@ -8,10 +8,6 @@
 #include <stdint.h>
 #include "buffer.h"
 #include "fifo.h"
-#include "delays.h"
-#include "process.h"
-#include "threads.h"
-#include "fifo.h"
 
 namespace FIFO{
 

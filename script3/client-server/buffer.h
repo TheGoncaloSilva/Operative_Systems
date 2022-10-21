@@ -17,10 +17,7 @@
 #include <sys/sem.h>
 #include <stdint.h>
 #include <string.h>
-#include "fifo.h"
-#include "delays.h"
 #include "process.h"
-#include "threads.h"
 
 struct buffer
 {

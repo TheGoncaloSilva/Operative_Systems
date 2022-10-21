@@ -82,7 +82,7 @@ namespace fifo
     {
         /* create the shared memory */
         fifoId = pshmget(IPC_PRIVATE, sizeof(FIFO), 0600 | IPC_CREAT | IPC_EXCL);
-        
+
         /*  attach shared memory to process addressing space */
         fifo = (FIFO*)pshmat(fifoId, NULL, 0);
 

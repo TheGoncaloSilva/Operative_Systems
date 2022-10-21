@@ -22,17 +22,28 @@
 #include "fifo.h"
 #include "delays.h"
 #include "process.h"
-#include "threads.h"
 
 namespace Service{
     /* \brief maximum number of possible buffers */
-    #define N 5
 
     static buffer *pool[N];
     static uint32_t poolId[N];
     static FIFO::fifo *freeBuffers;
     static uint32_t freeBuffersId, pendingRequestsId;
     static FIFO::fifo *pendingRequests;
+
+    /* Called by the server to process a string and output stats */
+    void processData(char *str, uint32_t strSize, uint32_t *characters, uint32_t *digits, uint32_t *spaces){
+        for(uint32_t i = 0; i < strSize; i++){
+            if(isspace(str[i])){
+                spaces++;
+            }else if (isdigit(str[i])){
+                digits++;
+            }else{
+                characters++;
+            }
+        }
+    }
 
     void setup_service(){
         freeBuffers = FIFO::createFifo(freeBuffers, &freeBuffersId);
@@ -73,22 +84,9 @@ namespace Service{
         buffer *buff = pool[buffId];
         // process request
         uint32_t nCharacters, nDigits, nSpaces;
-        processData(buff->string, buff->stringSize, &nCharacters, &nDigits, &nSpaces);
+        Service::processData(buff->string, buff->stringSize, &nCharacters, &nDigits, &nSpaces);
         // write response
         write_response(*buff, nCharacters, nDigits, nSpaces);
-    }
-
-    /* Called by the server to process a string and output stats */
-    void processData(char *str, uint32_t strSize, uint32_t *characters, uint32_t *digits, uint32_t *spaces){
-        for(int32_t i = 0; i < strSize; i++){
-            if(isspace(str[i])){
-                spaces++;
-            }else if (isdigit(str[i])){
-                digits++;
-            }else{
-                characters++;
-            }
-        }
     }
     
 }

@@ -7,8 +7,6 @@
 #include <sys/sem.h>
 #include <stdint.h>
 #include "delays.h"
-#include "process.h"
-#include "threads.h"
 
 #define N 10
 namespace FIFO{

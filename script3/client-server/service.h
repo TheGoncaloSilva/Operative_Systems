@@ -17,8 +17,6 @@
 #include "fifo.h"
 #include "delays.h"
 #include "process.h"
-#include "threads.h"
-
 namespace Service{
 
     void setup_service();

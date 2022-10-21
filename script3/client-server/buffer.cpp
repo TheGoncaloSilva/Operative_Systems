@@ -16,9 +16,6 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <stdint.h>
-#include "threads.h"
-#include "fifo.h"
-#include "delays.h"
 #include "process.h"
 #include "buffer.h"
 
