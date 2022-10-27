@@ -16,7 +16,7 @@
 #include <new>
 
 #include "sos.h"
-
+#include "thread.h"
 #include "dbc.h"
 
 /*
@@ -96,7 +96,11 @@ namespace sos
          * TODO point
          * Allocate the shared memory
          */
-
+		//sharedArea = (SharedArea*)mem_alloc(sharedArea);
+		if((sharedArea = new SharedArea()) == NULL){
+			perror("Failed Memory Allocation");
+			exit(EXIT_FAILURE);
+		}
 
         /* init fifo 0 (free buffers) */
         FIFO *fifo = &sharedArea->fifo[FREE_BUFFER];
@@ -120,6 +124,11 @@ namespace sos
          * TODO point
          * Init synchronization elements
          */
+        for(int i = 0; i < 2; i++){
+			sharedArea->accessCR[i] = PTHREAD_MUTEX_INITIALIZER;
+			sharedArea->fifoNotEmpty[i] = PTHREAD_COND_INITIALIZER;
+			sharedArea->fifoNotFull[i] = PTHREAD_COND_INITIALIZER;
+        }
     }
 
     /* -------------------------------------------------------------------- */
@@ -127,21 +136,46 @@ namespace sos
     /* Free all allocated synchronization resources and data structures */
     void destroy()
     {
+
         require(sharedArea != NULL, "sharea area must be allocated");
 
         /* 
          * TODO point
          * Destroy synchronization elements
          */
+        for(int i = 0; i < 2; i++){
+			pthread_mutex_destroy(&sharedArea->accessCR[i]);
+			pthread_cond_destroy(&sharedArea->fifoNotEmpty[i]);
+			pthread_cond_destroy(&sharedArea->fifoNotFull[i]);
+        }
 
         /* 
          * TODO point
         *  Destroy the shared memory
         */
+        if (sharedArea != NULL)
+        {
+            delete sharedArea;
+            sharedArea = NULL;
+        }
 
         /* nullify */
         sharedArea = NULL;
     }
+
+	/* Checks if the FIFO is full */
+	static bool isFull(FIFO *fifo){
+		require(fifo != NULL, "fifo must exist");
+		
+		return fifo->cnt == NBUFFERS;
+	}
+
+	/* Checks if the FIFO is empty */
+	static bool isEmpty(FIFO *fifo){
+		require(fifo != NULL, "fifo must exist");
+
+		return fifo->cnt == 0;
+	}
 
     /* -------------------------------------------------------------------- */
     /* -------------------------------------------------------------------- */
@@ -161,12 +195,25 @@ namespace sos
          * Replace with your code, 
          * avoiding race conditions and busy waiting
          */
+		mutex_lock(&sharedArea->accessCR[idx]);
+
+		if(isFull(&sharedArea->fifo[idx])){
+			cond_wait(&sharedArea->fifoNotFull[idx], &sharedArea->accessCR[idx]);
+		}
+
+		/* fifo insertion */
+		sharedArea->fifo[idx].tokens[sharedArea->fifo[idx].ii] = token;
+		// Replicating a circular array
+		sharedArea->fifo[idx].ii = (sharedArea->fifo[idx].ii + 1) % NBUFFERS;
+		sharedArea->fifo[idx].cnt++;
+
+		cond_broadcast(&sharedArea->fifoNotEmpty[idx]);
+		mutex_unlock(&sharedArea->accessCR[idx]);
     }
 
     /* -------------------------------------------------------------------- */
 
     /* Retrieve a token from a fifo  */
-
     static uint32_t fifoOut(uint32_t idx)
     {
 #if __DEBUG__
@@ -180,6 +227,23 @@ namespace sos
          * Replace with your code, 
          * avoiding race conditions and busy waiting
          */
+		mutex_lock(&sharedArea->accessCR[idx]);
+
+		if(isEmpty(&sharedArea->fifo[idx])){
+			cond_wait(&sharedArea->fifoNotEmpty[idx], &sharedArea->accessCR[idx]);
+		}
+
+		/* Remove and store the saved token */
+		uint32_t token;
+		FIFO fifo = sharedArea->fifo[idx];
+		token = fifo.tokens[fifo.ri];
+		// Replicating a circular array
+		fifo.ri = (fifo.ri + 1) % NBUFFERS;
+		fifo.cnt--;
+
+		cond_broadcast(&sharedArea->fifoNotFull[idx]);
+		mutex_unlock(&sharedArea->accessCR[idx]);
+		return token;
     }
 
     /* -------------------------------------------------------------------- */
