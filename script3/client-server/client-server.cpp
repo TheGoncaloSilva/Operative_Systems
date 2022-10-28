@@ -41,14 +41,18 @@ int main(int argc, char *argv[]){
     uint32_t nClients = 2;      // number of clients
     uint32_t nServers = 2;      // number of servers
 
-    /* start random generator */
-    srand(getpid());
+    /* Initialize and set the data */
+    Service::setup_service();
 
     uint32_t cPid[nClients];    // Clients ids
     fprintf(stdout, "Launching %d client processes\n", nClients);
     for(uint32_t id = 0; id < nClients; id++){
+
         if((cPid[id] = pfork()) == 0){
-            uint16_t index = rand()%stringsToProcessArray;
+            /* start random generator */
+            srand(getpid());
+            int index = rand()%stringsToProcessArray;
+            fprintf(stdout, "Client %d choose the words: %s\n", id, stringsToProcess[index]);
             Service::callService(stringsToProcess[index], strlen(stringsToProcess[index]));
             exit(0);
         }else{  // For the parent process to print

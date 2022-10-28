@@ -69,7 +69,7 @@ namespace Service{
         // check and print data received
         uint32_t nCharaters, nDigits, nSpaces;
         getStats(*buff, &nCharaters, &nDigits, &nSpaces);
-        fprintf(stdout, "String %s processes, %d characters, %d digits, %d spaces", 
+        fprintf(stdout, "String %s processes, %d characters, %d digits, %d spaces\n", 
             str, nCharaters, nDigits, nSpaces);
         // reset buffer -> maybe destroy or release semaphores
         reset(*buff);
@@ -86,6 +86,7 @@ namespace Service{
         uint32_t nCharacters, nDigits, nSpaces;
         Service::processData(buff->string, buff->stringSize, &nCharacters, &nDigits, &nSpaces);
         // write response
+        fprintf(stdout, "Server computed: %d characters, %d digits, %d spaces\n", nCharacters, nDigits, nSpaces);
         write_response(*buff, nCharacters, nDigits, nSpaces);
     }
     

@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <new>
 
@@ -68,10 +69,14 @@ namespace sos
          * semaphores (for implementation using processes) or
          * mutexes, conditions and condition variables (for implementation using threads)
          */
-
+		/* To be used in FIFO synchronization */
         pthread_mutex_t accessCR[2];
         pthread_cond_t fifoNotFull[2];
         pthread_cond_t fifoNotEmpty[2];
+
+		/* To be used in Buffer synchronization */
+		pthread_mutex_t buffer_accessCR[NBUFFERS];
+		pthread_cond_t buffer_available[NBUFFERS];
 
     };
 
@@ -96,7 +101,7 @@ namespace sos
          * TODO point
          * Allocate the shared memory
          */
-		//sharedArea = (SharedArea*)mem_alloc(sharedArea);
+		
 		if((sharedArea = new SharedArea()) == NULL){
 			perror("Failed Memory Allocation");
 			exit(EXIT_FAILURE);
@@ -124,11 +129,18 @@ namespace sos
          * TODO point
          * Init synchronization elements
          */
+		/* Synchronize FIFO */
         for(int i = 0; i < 2; i++){
 			sharedArea->accessCR[i] = PTHREAD_MUTEX_INITIALIZER;
 			sharedArea->fifoNotEmpty[i] = PTHREAD_COND_INITIALIZER;
 			sharedArea->fifoNotFull[i] = PTHREAD_COND_INITIALIZER;
         }
+
+		/* Synchronize BUFFER */
+		for(int i = 0; i < NBUFFERS; i++){
+			sharedArea->buffer_accessCR[i] = PTHREAD_MUTEX_INITIALIZER;
+			sharedArea->buffer_available[i] = PTHREAD_COND_INITIALIZER;
+		}
     }
 
     /* -------------------------------------------------------------------- */
@@ -143,11 +155,18 @@ namespace sos
          * TODO point
          * Destroy synchronization elements
          */
-        for(int i = 0; i < 2; i++){
+		/* Destroy FIFO synchronization */
+        for(uint32_t i = 0; i < 2; i++){
 			pthread_mutex_destroy(&sharedArea->accessCR[i]);
 			pthread_cond_destroy(&sharedArea->fifoNotEmpty[i]);
 			pthread_cond_destroy(&sharedArea->fifoNotFull[i]);
         }
+
+		/* Destroy BUFFER synchronization */
+		for(uint32_t i = 0; i < NBUFFERS; i++){
+			pthread_mutex_destroy(&sharedArea->buffer_accessCR[i]);
+			pthread_cond_destroy(&sharedArea->buffer_available[i]);
+		}
 
         /* 
          * TODO point
@@ -259,6 +278,9 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		// Fifo idx = 0, represents fifo freeBuffers
+		// During execution, the proccess will stay locked until a new buffer is free
+		return fifoOut(0);
     }
 
     /* -------------------------------------------------------------------- */
@@ -276,6 +298,8 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		// Copy and convert a const char* to a char[]
+		strcpy(sharedArea->pool[token].req,(char*)data);;
     }
 
     /* -------------------------------------------------------------------- */
@@ -292,6 +316,8 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		// Fifo idx = 1, represents fifo pending requests
+		fifoIn(1, token);
     }
 
     /* -------------------------------------------------------------------- */
@@ -309,6 +335,13 @@ namespace sos
          * Replace with your code, 
          * avoiding race conditions and busy waiting
          */
+
+		// wait checking the buffer if the data has been recorded
+		// create a thread variable for each buffer, that represents the access
+		// to CR
+		while(sharedArea->pool[token].req == NULL){
+			cond_wait(&sharedArea->buffer_available[token], &sharedArea->buffer_accessCR[token]);
+		}
     }
 
     /* -------------------------------------------------------------------- */
@@ -326,6 +359,7 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		resp = &sharedArea->pool[token].resp;
     }
 
     /* -------------------------------------------------------------------- */
@@ -342,6 +376,12 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		// Maybe clear the FIFO beforehand
+		//sharedArea->pool[token].resp = NULL;
+
+		// Fifo idx = 0, corresponds to free buffers
+		fifoIn(0, token);
+
     }
 
     /* -------------------------------------------------------------------- */
@@ -357,6 +397,8 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		// Fifo idx = 1, corresponds to pendingrequests
+		return fifoOut(1);
     }
 
     /* -------------------------------------------------------------------- */
@@ -374,6 +416,7 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		strcpy(data, sharedArea->pool[token].req);
     }
 
     /* -------------------------------------------------------------------- */
@@ -391,6 +434,7 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
+		sharedArea->pool[token].resp = *resp;
     }
 
     /* -------------------------------------------------------------------- */
@@ -408,6 +452,7 @@ namespace sos
          * Replace with your code, 
          * avoiding race conditions and busy waiting
          */
+		cond_broadcast(&sharedArea->buffer_available[token]);
     }
 
     /* -------------------------------------------------------------------- */
