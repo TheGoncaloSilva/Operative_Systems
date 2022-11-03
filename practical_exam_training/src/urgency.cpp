@@ -41,6 +41,7 @@ typedef struct
 {
    char name[MAX_NAME+1];
    int done; // 0: waiting for consultation; 1: consultation finished
+   // includes threads here
 } Patient;
 
 typedef struct
@@ -49,6 +50,8 @@ typedef struct
     Patient all_patients[MAX_PATIENTS];
     PriorityFIFO triage_queue;
     PriorityFIFO doctor_queue;
+    
+    // include semaphores here
 } HospitalData;
 
 HospitalData * hd = NULL;

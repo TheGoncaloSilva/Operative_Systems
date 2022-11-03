@@ -49,7 +49,7 @@ struct ARGV
 /* ******************************************************* */
 /* The server procedure to process a request */
 
-void processRequest(uint32_t id)
+int32_t processRequest(uint32_t id)
 {
 #ifdef __DEBUG__
 fprintf(stderr, "%s(id: %u)\n", __FUNCTION__, id);
@@ -59,6 +59,7 @@ fprintf(stderr, "%s(id: %u)\n", __FUNCTION__, id);
     req[MAX_STRING_LEN] = '\0';
     uint32_t token = sos::getPendingRequest();
     sos::getRequestData(token, req);
+    if(*req == '\0') return -1; // No more clients, disconnect server
     sos::Response resp;
     for (uint32_t i = 0; req[i] != '\0'; i++)
     {
@@ -68,14 +69,16 @@ fprintf(stderr, "%s(id: %u)\n", __FUNCTION__, id);
     }
     sos::putResponseData(token, &resp);
     sos::notifyClient(token);
+    return 1;
 }
 
 /* ******************************************************* */
 /* The server life cycle */
-
+void server(uint32_t id);
 /* To use in thread concurrent programming */
 void* server_main(void* arg){
-    server((uint32_t)arg);
+    uint32_t *narg = (uint32_t*)arg;
+    server(*narg);
     return NULL;
 }
 
@@ -89,9 +92,10 @@ fprintf(stderr, "%s(id: %u)\n", __FUNCTION__, id);
 #endif
 
     srand(getpid());
-    while (true)
+    int32_t loop = 1;
+    while (loop > 0)
     {
-        processRequest(id);
+        loop = processRequest(id);
     }
 }
 
@@ -138,7 +142,7 @@ fprintf(stderr, "%s(id: %u, req: \"%s\", ...)\n", __FUNCTION__, id, req);
 
 /* ******************************************************* */
 /* The client life cycle */
-
+void client(uint32_t id, uint32_t niter);
 /* For use in concurrent arguments */
 void* client_main(void* argp){
     ARGV* argv = (ARGV*)argp;
@@ -233,16 +237,16 @@ int main(int argc, char *argv[])
     /* launching the Servers */
     pthread_t sthr[nservers];   /* Servers' ids */
     //ARGV sarg[nservers];        /* Servers' args */
-    printf("Launching %d server threads, each performing %d iterations\n", nservers, niter);
+    printf("\nLaunching %d server threads\n", nservers);
     /* launching the servers */    
     for(uint32_t i = 0; i < nservers; i++){
         pthread_create(&sthr[i], NULL, server_main, &i);
     }
 
     /* launching the clients */
-
     pthread_t cthr[nclients];   /* Clients' ids */
     ARGV carg[nclients];        /* Clients' args */
+    printf("Launching %d client threads, each performing %d iterations\n", nclients, niter);
     for(uint32_t i = 0; i < nclients; i++){
         carg[i].id = i;
         carg[i].niter = niter;
@@ -250,24 +254,32 @@ int main(int argc, char *argv[])
     }
 
     /* waiting for client to conclude */
-
     for(uint32_t i = 0; i < nclients; i++){
         pthread_join(cthr[i], NULL);
         fprintf(stdout, "Client thread %d terminated\n", i);
     }
-
-    /* waiting for servers to conclude */
 
     /* 
      * Be aware that the servers are in a infinite loop processing requests.
      * So, they must be informed to finish their job.
      * This can be done sending to every one of them an empty request string.
      */
+    for(uint32_t i = 0; i < nservers; i++){
+        const char req = '\0';
+        uint32_t token = sos::getFreeBuffer();
+        fprintf(stdout, "term\n");
+        sos::putRequestData(token, &req);
+        sos::submitRequest(token);
+    }
 
+    /* waiting for servers to conclude */
     for(uint32_t i = 0; i < nservers; i++){
         pthread_join(sthr[i], NULL);
         fprintf(stdout, "Server thread %d terminated\n", i);
     }
+
+    /* Destroy concurrency and shared memory*/
+    sos::close();
 
     /* quitting */
     return EXIT_SUCCESS;

@@ -1,0 +1,17 @@
+1. Identificar entidades ativas:
+    paciente, enfermeiros, doutores
+
+    -> Apenas resolver a parte técnica (Threads ou Processos) de lançar as entidades ativas e esperar a sua conclusão (Não há pacientes)
+
+    -> Com Threads, fazer join com os pacientes e dps o resto morre sozinho. Nos processos, acabar clientes e dps kill com os enfermeiros e medicos
+    -> Ou para matar os objetos, enviar o max_id para todos os objetos e eles morrerem sozinhos, controladamente
+
+2. Identificar módulos partilhados (Acesso a memória partilhada)
+    pfifo
+
+    -> Garantir atomizidade (Operação indivisível, garantir que ninguém observa o estado intermédio do objeto) com exclusão-mútua
+
+3. Se aplicável, identificar pontos comunicação direta entre entidades ativas:
+    doutor -> paciente 
+
+    -> semáforo / mutex + cond + predicado
