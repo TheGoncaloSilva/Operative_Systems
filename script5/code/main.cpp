@@ -67,6 +67,7 @@ fprintf(stderr, "%s(id: %u)\n", __FUNCTION__, id);
         if (isdigit(req[i])) resp.noDigits++;
         if (isalpha(req[i])) resp.noLetters++;
     }
+    //fprintf(stderr, "%d\n", resp.noChars);
     sos::putResponseData(token, &resp);
     sos::notifyClient(token);
     return 1;

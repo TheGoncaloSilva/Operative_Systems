@@ -305,6 +305,7 @@ namespace sos
          * Replace with your code, 
          */
 		// Copy and convert a const char* to a char[]
+        sharedArea->pool[token].resp.noChars = 55;
 		strcpy(sharedArea->pool[token].req,(char*)data);;
     }
 
@@ -346,9 +347,14 @@ namespace sos
         // wait checking the buffer if the data has been recorded
         // create a thread variable for each buffer, that represents the access
         // to CR
+
+        mutex_lock(&sharedArea->buffer_accessCR[token]);
+        
         while(sharedArea->buffer_done[token] == 0){
                 cond_wait(&sharedArea->buffer_available[token], &sharedArea->buffer_accessCR[token]);
         }
+
+        mutex_unlock(&sharedArea->buffer_accessCR[token]);
     }
 
     /* -------------------------------------------------------------------- */
@@ -405,7 +411,7 @@ namespace sos
          * TODO point
          * Replace with your code, 
          */
-		// Fifo idx = 1, corresponds to pendingrequests
+		// Fifo idx = 1, corresponds to pending requests
 		return fifoOut(1);
     }
 
