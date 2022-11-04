@@ -63,21 +63,15 @@ namespace sos
         /* A fifo for tokens of free buffers and another for tokens with pending requests */
         FIFO fifo[2];
 
-        /*
-         * TODO point
-         * Declare here all you need to accomplish the synchronization,
-         * semaphores (for implementation using processes) or
-         * mutexes, conditions and condition variables (for implementation using threads)
-         */
 		/* To be used in FIFO synchronization */
         pthread_mutex_t accessCR[2];
         pthread_cond_t fifoNotFull[2];
         pthread_cond_t fifoNotEmpty[2];
 
 		/* To be used in Buffer synchronization */
-		pthread_mutex_t buffer_accessCR[NBUFFERS];
+		pthread_mutex_t buffer_accessCR;
 		pthread_cond_t buffer_available[NBUFFERS];
-        uint32_t buffer_done[NBUFFERS];
+        bool buffer_done[NBUFFERS];
 
     };
 
@@ -97,12 +91,8 @@ namespace sos
 #endif
 
         require(sharedArea == NULL, "Shared area must not exist");
-
-        /* 
-         * TODO point
-         * Allocate the shared memory
-         */
 		
+        /* Alocate shared memory */
 		if((sharedArea = new SharedArea()) == NULL){
 			perror("Failed Memory Allocation");
 			exit(EXIT_FAILURE);
@@ -126,10 +116,6 @@ namespace sos
         fifo->ii = fifo->ri = 0;
         fifo->cnt = 0;
 
-        /* 
-         * TODO point
-         * Init synchronization elements
-         */
 		/* Synchronize FIFO */
         for(int i = 0; i < 2; i++){
 			sharedArea->accessCR[i] = PTHREAD_MUTEX_INITIALIZER;
@@ -138,11 +124,17 @@ namespace sos
         }
 
 		/* Synchronize BUFFER */
+        sharedArea->buffer_accessCR = PTHREAD_MUTEX_INITIALIZER;
 		for(int i = 0; i < NBUFFERS; i++){
-			sharedArea->buffer_accessCR[i] = PTHREAD_MUTEX_INITIALIZER;
 			sharedArea->buffer_available[i] = PTHREAD_COND_INITIALIZER;
-            sharedArea->buffer_done[i] = 0;
+            sharedArea->buffer_done[i] = false;
 		}
+
+        /* 
+            ALWAYS REMEMBER -> EVERY ZONE IN WICH THE BUFFER OR SHARED MEMORY IS ACCESSED DIRECTLY
+            MUTUAL EXCLUSION SHOULD BE USED, IN THIS CASE WITH ONLY ONE MUTEX FOR ALL BUFFERS,
+            BUT ONE MUTEX FOR EVERY BUFFER CAN ALSO BE IMPLEMENTED
+        */
     }
 
     /* -------------------------------------------------------------------- */
@@ -153,10 +145,6 @@ namespace sos
 
         require(sharedArea != NULL, "sharea area must be allocated");
 
-        /* 
-         * TODO point
-         * Destroy synchronization elements
-         */
 		/* Destroy FIFO synchronization */
         for(uint32_t i = 0; i < 2; i++){
 			pthread_mutex_destroy(&sharedArea->accessCR[i]);
@@ -165,15 +153,12 @@ namespace sos
         }
 
 		/* Destroy BUFFER synchronization */
+        pthread_mutex_destroy(&sharedArea->buffer_accessCR);
 		for(uint32_t i = 0; i < NBUFFERS; i++){
-			pthread_mutex_destroy(&sharedArea->buffer_accessCR[i]);
 			pthread_cond_destroy(&sharedArea->buffer_available[i]);
 		}
 
-        /* 
-         * TODO point
-        *  Destroy the shared memory
-        */
+        /* Destroy the shared memory */
         if (sharedArea != NULL)
         {
             delete sharedArea;
@@ -184,6 +169,7 @@ namespace sos
         sharedArea = NULL;
     }
 
+    /* Just for matching with .h without altering it */
     void close(){
         destroy();
     }
@@ -215,11 +201,7 @@ namespace sos
         require(idx == FREE_BUFFER or idx == PENDING_REQUEST, "idx is not valid");
         require(token < NBUFFERS, "token is not valid");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         * avoiding race conditions and busy waiting
-         */
+        /* avoiding race conditions and busy waiting */
 		mutex_lock(&sharedArea->accessCR[idx]);
 
 		if(isFull(&sharedArea->fifo[idx])){
@@ -247,11 +229,7 @@ namespace sos
 
         require(idx == FREE_BUFFER or idx == PENDING_REQUEST, "idx is not valid");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         * avoiding race conditions and busy waiting
-         */
+        /* avoiding race conditions and busy waiting */
 		mutex_lock(&sharedArea->accessCR[idx]);
 
 		if(isEmpty(&sharedArea->fifo[idx])){
@@ -259,12 +237,10 @@ namespace sos
 		}
 
 		/* Remove and store the saved token */
-		uint32_t token;
-		FIFO fifo = sharedArea->fifo[idx];
-		token = fifo.tokens[fifo.ri];
+		uint32_t token = sharedArea->fifo[idx].tokens[sharedArea->fifo[idx].ri];
 		// Replicating a circular array
-		fifo.ri = (fifo.ri + 1) % NBUFFERS;
-		fifo.cnt--;
+		sharedArea->fifo[idx].ri = (sharedArea->fifo[idx].ri + 1) % NBUFFERS;
+		sharedArea->fifo[idx].cnt--;
 
 		cond_broadcast(&sharedArea->fifoNotFull[idx]);
 		mutex_unlock(&sharedArea->accessCR[idx]);
@@ -280,13 +256,8 @@ namespace sos
         fprintf(stderr, "%s()\n", __FUNCTION__);
 #endif
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
-		// Fifo idx = 0, represents fifo freeBuffers
 		// During execution, the proccess will stay locked until a new buffer is free
-		return fifoOut(0);
+		return fifoOut(FREE_BUFFER);
     }
 
     /* -------------------------------------------------------------------- */
@@ -300,13 +271,10 @@ namespace sos
         require(token < NBUFFERS, "token is not valid");
         require(data != NULL, "data pointer can not be NULL");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
 		// Copy and convert a const char* to a char[]
-        sharedArea->pool[token].resp.noChars = 55;
+        mutex_lock(&sharedArea->buffer_accessCR);
 		strcpy(sharedArea->pool[token].req,(char*)data);;
+        mutex_unlock(&sharedArea->buffer_accessCR);
     }
 
     /* -------------------------------------------------------------------- */
@@ -319,13 +287,9 @@ namespace sos
 
         require(token < NBUFFERS, "token is not valid");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
 		// Fifo idx = 1, represents fifo pending requests
-        cond_broadcast(&sharedArea->buffer_available[token]);
-		fifoIn(1, token);
+        // The thread will stay locked if the fifo is full
+		fifoIn(PENDING_REQUEST, token);
     }
 
     /* -------------------------------------------------------------------- */
@@ -338,23 +302,16 @@ namespace sos
 
         require(token < NBUFFERS, "token is not valid");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         * avoiding race conditions and busy waiting
-         */
-
-        // wait checking the buffer if the data has been recorded
-        // create a thread variable for each buffer, that represents the access
-        // to CR
-
-        mutex_lock(&sharedArea->buffer_accessCR[token]);
-        
-        while(sharedArea->buffer_done[token] == 0){
-                cond_wait(&sharedArea->buffer_available[token], &sharedArea->buffer_accessCR[token]);
+        /* avoiding race conditions and busy waiting */
+        // Use mutual exclusion with cond_wait obligatory
+        // To use cond_signal, mutex operations should be removed
+        mutex_lock(&sharedArea->buffer_accessCR);
+        while(!sharedArea->buffer_done[token]){
+                //cond_signal(&sharedArea->buffer_available[token]);
+                cond_wait(&sharedArea->buffer_available[token], &sharedArea->buffer_accessCR);
         }
+        mutex_unlock(&sharedArea->buffer_accessCR);
 
-        mutex_unlock(&sharedArea->buffer_accessCR[token]);
     }
 
     /* -------------------------------------------------------------------- */
@@ -368,11 +325,12 @@ namespace sos
         require(token < NBUFFERS, "token is not valid");
         require(resp != NULL, "resp pointer can not be NULL");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
-		resp = &sharedArea->pool[token].resp;
+        /* avoiding race conditions and busy waiting */
+        mutex_lock(&sharedArea->buffer_accessCR);
+        resp->noChars = sharedArea->pool[token].resp.noChars;
+        resp->noDigits = sharedArea->pool[token].resp.noDigits;
+        resp->noLetters = sharedArea->pool[token].resp.noLetters;
+        mutex_unlock(&sharedArea->buffer_accessCR);
     }
 
     /* -------------------------------------------------------------------- */
@@ -385,17 +343,16 @@ namespace sos
 
         require(token < NBUFFERS, "token is not valid");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
+
         // Reinicialize FIFO
-        sharedArea->buffer_done[token] = 0;
-        
+        /* avoiding race conditions and busy waiting */
+        mutex_lock(&sharedArea->buffer_accessCR);
+        memset(sharedArea->pool[token].req , '\0' , MAX_STRING_LEN + 1);
+        sharedArea->buffer_done[token] = false;
+        mutex_unlock(&sharedArea->buffer_accessCR);
 
         // Fifo idx = 0, corresponds to free buffers
-        fifoIn(0, token);
-
+        fifoIn(FREE_BUFFER, token);
     }
 
     /* -------------------------------------------------------------------- */
@@ -407,12 +364,8 @@ namespace sos
         fprintf(stderr, "%s()\n", __FUNCTION__);
 #endif
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
 		// Fifo idx = 1, corresponds to pending requests
-		return fifoOut(1);
+		return fifoOut(PENDING_REQUEST);
     }
 
     /* -------------------------------------------------------------------- */
@@ -426,11 +379,11 @@ namespace sos
         require(token < NBUFFERS, "token is not valid");
         require(data != NULL, "data pointer can not be NULL");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
-		strcpy(data, sharedArea->pool[token].req);
+        /* avoiding race conditions and busy waiting */
+        mutex_lock(&sharedArea->buffer_accessCR);
+        memcpy(data , &sharedArea->pool[token].req , (size_t)(MAX_STRING_LEN + 1));
+		//strcpy(data, sharedArea->pool[token].req);
+        mutex_unlock(&sharedArea->buffer_accessCR);
     }
 
     /* -------------------------------------------------------------------- */
@@ -444,12 +397,12 @@ namespace sos
         require(token < NBUFFERS, "token is not valid");
         require(resp != NULL, "resp pointer can not be NULL");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         */
-		sharedArea->pool[token].resp = *resp;
-        
+        /* avoiding race conditions and busy waiting */
+        mutex_lock(&sharedArea->buffer_accessCR);
+		sharedArea->pool[token].resp.noChars = resp->noChars;
+        sharedArea->pool[token].resp.noDigits = resp->noDigits;
+        sharedArea->pool[token].resp.noLetters = resp->noLetters;
+        mutex_unlock(&sharedArea->buffer_accessCR);
     }
 
     /* -------------------------------------------------------------------- */
@@ -462,13 +415,11 @@ namespace sos
 
         require(token < NBUFFERS, "token is not valid");
 
-        /* 
-         * TODO point
-         * Replace with your code, 
-         * avoiding race conditions and busy waiting
-         */
-        sharedArea->buffer_done[token] = 1;
+        /* avoiding race conditions and busy waiting */
+        mutex_lock(&sharedArea->buffer_accessCR);
+        sharedArea->buffer_done[token] = true;
 	    cond_broadcast(&sharedArea->buffer_available[token]);
+        mutex_unlock(&sharedArea->buffer_accessCR);
     }
 
     /* -------------------------------------------------------------------- */

@@ -268,7 +268,6 @@ int main(int argc, char *argv[])
     for(uint32_t i = 0; i < nservers; i++){
         const char req = '\0';
         uint32_t token = sos::getFreeBuffer();
-        fprintf(stdout, "term\n");
         sos::putRequestData(token, &req);
         sos::submitRequest(token);
     }
