@@ -31,6 +31,11 @@ typedef struct
    uint32_t inp;  ///< point of insertion (queue tail)
    uint32_t out;  ///< point of retrieval (queue head)
    uint32_t cnt;  ///< number of items stored
+
+   /* Fifo Synchronization */
+   pthread_mutex_t accessCR;
+   pthread_cond_t fifoNotFull;
+   pthread_cond_t fifoNotEmpty;
 } PriorityFIFO;
 
 void init_pfifo(PriorityFIFO* pfifo);
