@@ -59,7 +59,10 @@ fprintf(stderr, "%s(id: %u)\n", __FUNCTION__, id);
     req[MAX_STRING_LEN] = '\0';
     uint32_t token = sos::getPendingRequest();
     sos::getRequestData(token, req);
-    if(*req == '\0') return -1; // No more clients, disconnect server
+    if(strcmp(req, "") == 0){
+        sos::releaseBuffer(token); // Release buffer and avoid deadlock
+        return -1; // No more clients, disconnect server
+    }
     sos::Response resp;
     for (uint32_t i = 0; req[i] != '\0'; i++)
     {
@@ -241,6 +244,12 @@ int main(int argc, char *argv[])
     printf("\nLaunching %d server threads\n", nservers);
     /* launching the servers */    
     for(uint32_t i = 0; i < nservers; i++){
+        /* 
+        NOTA: Estás a passar como argumento um ponteiro para o i (&i), mas o i está a ser iterado. 
+        Nada garante que quando a instância da função server_main execute o valor do i não tenha já alterado. 
+        Cria, fora do for, um array de int (int ids[nserves]) e, dentro do for, atribuis o i a uma posição desse 
+        array (ids[i] = i) e passas um ponteiro para essa posição (&ids[i]).
+        */
         pthread_create(&sthr[i], NULL, server_main, &i);
     }
 
@@ -266,9 +275,9 @@ int main(int argc, char *argv[])
      * This can be done sending to every one of them an empty request string.
      */
     for(uint32_t i = 0; i < nservers; i++){
-        const char req = '\0';
+        const char *req = "";
         uint32_t token = sos::getFreeBuffer();
-        sos::putRequestData(token, &req);
+        sos::putRequestData(token, req);
         sos::submitRequest(token);
     }
 

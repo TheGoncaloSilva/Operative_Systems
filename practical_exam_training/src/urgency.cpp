@@ -77,6 +77,11 @@ void init_simulation(uint32_t np)
    hd->num_patients = np;
    init_pfifo(&hd->triage_queue);
    init_pfifo(&hd->doctor_queue);
+   for(uint16_t i = 0; i < np; i++){
+      hd->all_patients[i].done = 0;
+      hd->all_patients[i].accessCR = PTHREAD_MUTEX_INITIALIZER;
+      hd->all_patients[i].clientTreated = PTHREAD_COND_INITIALIZER;
+   }
 }
 
 /* ************************************************* */
@@ -119,8 +124,6 @@ void patient_goto_urgency(int id)
 {
    new_patient(&hd->all_patients[id]);
    check_valid_name(hd->all_patients[id].name);
-   hd->all_patients[id].accessCR = PTHREAD_MUTEX_INITIALIZER;
-   hd->all_patients[id].clientTreated = PTHREAD_COND_INITIALIZER;
    printf("\e[30;01mPatient %s (number %u): get to hospital\e[0m\n", hd->all_patients[id].name, id);
    insert_pfifo(&hd->triage_queue, id, 1); // all elements in triage queue with the same priority!
 }
@@ -145,9 +148,7 @@ void patient_life(int id)
    //nurse_iteration();  // to be deleted in concurrent version
    //doctor_iteration(); // to be deleted in concurrent version
    patient_wait_end_of_consultation(id);
-   mutex_lock(&hd->all_patients[id].accessCR);
    memset(&(hd->all_patients[id]), 0, sizeof(Patient)); // patient finished
-   mutex_unlock(&hd->all_patients[id].accessCR);
 }
 
 /* ************************************************* */
@@ -255,9 +256,11 @@ int main(int argc, char *argv[])
 
    /* Launching patients threads*/
    pthread_t patientsThr[npatients];
+   int patientsArgs[npatients];
    fprintf(stdout, "->Launching %d patients\n", npatients);
    for(uint16_t i = 0; i < npatients; i++){
-      pthread_create(&patientsThr[i], NULL, &patientLife, NULL);
+      patientsArgs[i] = i;
+      pthread_create(&patientsThr[i], NULL, &patientLife, &patientsArgs[i]);
    }
 
    /* Close patients threads */
@@ -266,26 +269,30 @@ int main(int argc, char *argv[])
       fprintf(stdout, "Patient %d exited urgency\n", i);
    }
 
-   for(uint16_t i = 0; i < nnurses; i++){
+   /*for(uint16_t i = 0; i < nnurses; i++){
       insert_pfifo(&hd->triage_queue, MAX_PATIENTS, 1); // MAX_PATIENTS to trigger exit of threads
-   }
+   }*/
 
    /* Close nurses threads */
    for(uint16_t i = 0; i < nnurses; i++){
-      pthread_join(nursesThr[i], NULL);
+      //pthread_join(nursesThr[i], NULL);
+      pthread_cancel(nursesThr[i]);
       fprintf(stdout, "Nurse %d finished shift\n", i);
    }
 
    /* Send a impossible ID to doctors, in order for it to finish urgency shift */
-   for(uint16_t i = 0; i < ndoctors; i++){
+   /*for(uint16_t i = 0; i < ndoctors; i++){
       insert_pfifo(&hd->doctor_queue, MAX_PATIENTS, 1); // MAX_PATIENTS to trigger exit of threads
-   }
+   }*/
 
       /* Close nurses threads */
    for(uint16_t i = 0; i < ndoctors; i++){
-      pthread_join(doctorsThr[i], NULL);
+      //pthread_join(doctorsThr[i], NULL);
+      pthread_cancel(doctorsThr[i]);
       fprintf(stdout, "Doctors %d finished shift\n", i);
    }
+
+   delete hd;
 
    return EXIT_SUCCESS;
 }
