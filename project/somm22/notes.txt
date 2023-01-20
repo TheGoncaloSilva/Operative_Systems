@@ -1,0 +1,21 @@
+o NULL ou endereço 0 é inválido porque é ocupado/usado pelo Kernel
+
+-k (0x2000) de espaço do Kernel
+-m (0x10000) espaço total de memória
+
+Process Event Queue -> Eventos futuros que iniciem a execução caso tenham recursos suficientes. O evento processado na iteração seguinte é o que está no topo da tabela. A não ser que a memória existente não seja suficiente -> first come first served
+
+Quando segmentos contíguos de memória são libertados, eles são concatenados num só segmentos grande
+
+Não restrição à execução de CPU, pode existir restrição à execução de memória, mas os programas nunca são restringidos por CPU
+
+Políticas para serem implementadas
+1. First fit
+2. Next fit
+3. best fit
+4. worst fit
+
+
+correr com -y para interface gráfica
+
+probe: todas as funções têm um identificador unico associado e um branch para cada. É possivel ativar e desativar ids de probes. Cada vez que está ativada em cada função, mostra os argumentos de entrada de cada função 
